@@ -31,7 +31,7 @@ create table if not exists public.kb_document (
   code        text not null check (code ~ '^[0-9A-Za-z가-힣][0-9A-Za-z가-힣-]{0,39}$'),  -- 인용 ID 머리(예: ALP-EM-2025)
   title       text not null default '',
   country     text not null check (length(trim(country)) > 0),   -- '공통(사내)' = 어느 나라 질문에도 함께 찾음
-  field       text not null default '기타' check (field in ('배출가스', '안전', '소음', 'EMC', '기능안전', '형식승인', '기타')),
+  field       text not null default '기타',                        -- 허용 값은 아래 kb_document_field_check
   revised     date,                                              -- 개정일
   effective   date,                                              -- 시행일
   status      text not null default '운영' check (status in ('운영', '검수 중', '구버전')),
@@ -44,6 +44,12 @@ create table if not exists public.kb_document (
   updated_at  timestamptz not null default now(),
   constraint kb_document_uniq unique (owner_id, code)            -- upsert onConflict = 'owner_id,code'
 );
+
+-- 인증 분야 목록 — js/logic.js 의 FIELDS 와 같아야 합니다(test/logic.test.mjs 가 대조).
+-- 2026-09-30 「사이버 보안」 추가. 표를 이미 만든 DB 에서도 이 파일을 다시 실행하면 새 목록으로 바뀝니다.
+alter table public.kb_document drop constraint if exists kb_document_field_check;
+alter table public.kb_document add constraint kb_document_field_check
+  check (field in ('배출가스', '안전', '소음', 'EMC', '기능안전', '사이버 보안', '형식승인', '기타'));
 
 create table if not exists public.kb_chunk (
   id          bigint generated always as identity primary key,

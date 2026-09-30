@@ -73,6 +73,9 @@ begin
   update public.kb_document set title = '알파국 비도로 배출가스 기준(가상)' where code = 'ALP-EM-2025';
   perform public._assert((select updated_at > created_at from public.kb_document where code = 'ALP-EM-2025'), 'updated_at 트리거가 수정 시각을 갱신한다');
   -- 기록은 본인 것이라도 고치거나 지울 수 없다(감사 기록)
+  -- 인증 분야(2026-09-30 「사이버 보안」 추가): 목록 밖 값은 막는다
+  perform public._assert_raises($s$insert into public.kb_document (code, country, field) values ('BET-CS-X', '베타국(가상)', '해킹')$s$,
+    '23514', '인증 분야 목록 밖 값(해킹)은 저장되지 않는다');
   perform public._assert_raises($s$update public.qa_log set answer = '고친 답'$s$, '42501', 'A 도 자기 질의 기록을 고칠 수 없다');
   perform public._assert_raises($s$delete from public.qa_log$s$, '42501', 'A 도 자기 질의 기록을 지울 수 없다');
   perform public._assert_raises($s$delete from public.qa_feedback_log$s$, '42501', 'A 도 피드백 기록을 지울 수 없다');
@@ -196,6 +199,17 @@ begin
   perform public._assert_eq((select count(*) from public.qa_log), 2::bigint, '문서를 지워도 질의 기록은 남는다(감사)');
 end $t$;
 commit;
+
+-- 사이버 보안 분야 문서는 저장된다(2026-09-30 추가, 다른 검증 수에 영향이 없도록 되돌림)
+begin;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local role authenticated;
+do $t$
+begin
+  insert into public.kb_document (code, title, country, field) values ('BET-CS-2026', '베타국 사이버 보안 요건(가상)', '베타국(가상)', '사이버 보안');
+  perform public._assert_eq((select field from public.kb_document where code = 'BET-CS-2026'), '사이버 보안'::text, '「사이버 보안」 분야 문서를 저장할 수 있다');
+end $t$;
+rollback;
 
 -- ----------------------------------------------------------------------------
 -- 6. 함수 권한 · search_path · 표 권한

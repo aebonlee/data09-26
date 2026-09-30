@@ -112,6 +112,40 @@ test('질문에서 국가·분야 읽기, 지식베이스에 없는 실제 국�
   assert.equal(d.unknownCountry, '독일'); assert.equal(d.field, 'EMC');
   assert.equal(L.detectSlots('기능안전 평가 자료', cs).field, '기능안전');
 });
+test('사이버 보안 분야(2026-09-30 요청) — 질문 낱말로 읽기, 「보안」이 「안전」보다 먼저, 다른 분야 질문은 그대로', () => {
+  const cs = L.countries(sampleDb());
+  for (const q of ['베타국 사이버 보안 요건은?', '감마연합 Cybersecurity 요건', '굴착기 해킹 대응', '취약점 처리 기한은?', '소프트웨어 업데이트 전자 서명', 'SBOM 보관 기간', '원격 접속 보안 안전 요건'])
+    assert.equal(L.detectSlots(q, cs).field, '사이버 보안', q);
+  assert.equal(L.detectSlots('베타국 비상 정지 장치 요건', cs).field, '안전');
+  assert.equal(L.detectSlots('감마연합 방사 내성 전계 세기', cs).field, 'EMC');
+  assert.ok(L.FIELDS.includes('사이버 보안'));
+  assert.equal(L.fieldLabel('사이버 보안'), '사이버 보안 (Cybersecurity)');
+  assert.equal(L.fieldLabel('소음'), '소음');
+  for (const v of ['사이버보안', 'Cybersecurity', 'cyber security', '사이버 보안 (Cybersecurity)']) assert.equal(L.normalizeField(v), '사이버 보안', v);
+  assert.equal(L.cleanDoc({ code: 'X', field: '없는 분야' }).field, '기타');
+});
+test('인증 분야 목록 — DB 스키마(kb_document_field_check)와 화면 목록(FIELDS)이 같음', () => {
+  const sql = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8');
+  const m = /kb_document_field_check\s+check \(field in \(([^)]*)\)\)/.exec(sql);
+  assert.ok(m, 'schema.sql 에 kb_document_field_check 가 없음');
+  assert.deepEqual(m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, '')), L.FIELDS);
+});
+test('사이버 보안 분야 거르기 — 그 분야 문서만 찾고, 사이버 보안 문서가 없는 나라는 근거 없음', () => {
+  const db = sampleDb(), ix = L.buildIndex(db.chunks);
+  const al = L.allowedChunks(db, { field: '사이버 보안' }, L.defaultSettings());
+  const codes = [...new Set(Object.keys(al.map).map((id) => id.split(' ')[0]))].sort();
+  assert.deepEqual(codes, ['BET-CS-2026', 'GAM-CS-2026']);
+  const r = L.ask(db, ix, '베타국 소프트웨어 업데이트 보안 요건은?', { today: TODAY });
+  assert.equal(r.filters.field, '사이버 보안');
+  assert.equal(r.gate.status, 'sufficient');
+  assert.ok(r.evidence.every((e) => e.doc.field === '사이버 보안'));
+  assert.match(r.prompt, /분야: 사이버 보안 \(Cybersecurity\)/);
+  const g = L.ask(db, ix, '감마연합 해킹 같은 보안 사고 보고 기한은?', { today: TODAY });
+  assert.ok(g.evidence[0].flags.some((f) => f.startsWith('시행 전(2028-01-01')));
+  const no = L.ask(db, ix, '알파국 사이버 보안 취약점 관리 요건은?', { today: TODAY });
+  assert.equal(no.gate.status, 'insufficient');
+  assert.equal(no.prompt, '');
+});
 test('골든셋 — 정답 조항 Recall@5 100%, 답이 없는 질문 거절 100%', () => {
   const db = sampleDb(), g = L.runGolden(db, L.buildIndex(db.chunks), S.GOLDEN, { today: TODAY });
   assert.equal(g.recall, 1, g.rows.filter((r) => !r.ok).map((r) => r.q).join(', '));

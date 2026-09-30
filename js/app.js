@@ -87,10 +87,10 @@
         h('a', { class: 'btn', href: '#/docs' }, '지식 문서로')));
   }
   function loadSample() {
-    if (db.docs.length && !db.sample && !confirm('지금 넣어 둔 문서에 가상 샘플 6개를 더합니다. 계속할까요?')) return;
+    if (db.docs.length && !db.sample && !confirm('지금 넣어 둔 문서에 가상 샘플 8개를 더합니다. 계속할까요?')) return;
     SAMPLE.DOCS.forEach(function (d) { var x = Object.assign({}, d, { sample: true, addedAt: nowStr() }); L.upsertDoc(db, x); });
     db.sample = db.docs.every(function (d) { return d.sample; });
-    save(); toast('가상 샘플 규정 6개를 넣었습니다. 예시 질문을 눌러 보세요.');
+    save(); toast('가상 샘플 규정 8개를 넣었습니다. 예시 질문을 눌러 보세요.');
     location.hash = '#/ask'; render();
   }
 
@@ -131,7 +131,7 @@
 
   function evidenceCard(e) {
     var d = e.doc, c = e.chunk;
-    var meta = [d.country, d.field, d.revised ? '개정 ' + d.revised : '', d.effective ? '시행 ' + d.effective : '', c.page ? c.page + (c.pageEnd && c.pageEnd !== c.page ? '~' + c.pageEnd : '') + '쪽' : '', d.source].filter(Boolean).join(' · ');
+    var meta = [d.country, L.fieldLabel(d.field), d.revised ? '개정 ' + d.revised : '', d.effective ? '시행 ' + d.effective : '', c.page ? c.page + (c.pageEnd && c.pageEnd !== c.page ? '~' + c.pageEnd : '') + '쪽' : '', d.source].filter(Boolean).join(' · ');
     return h('article', { class: 'ev' },
       h('div', { class: 'ev-top' }, h('span', { class: 'cite' }, e.label), h('b', { class: 'ev-ref' }, L.chunkRef(c, d)),
         h('span', { class: 'note' }, '점수 ' + e.score + (e.cos != null ? ' · 벡터 ' + e.cos : ''))),
@@ -159,7 +159,7 @@
       var op = h('option', { value: o[0] }, o[1]); if ((ui.country == null ? '__auto' : ui.country) === o[0]) op.selected = true; cSel.appendChild(op);
     });
     var fSel = h('select', { 'aria-label': '인증 분야 조건' });
-    [['__auto', '질문에서 읽기(자동)'], ['', '전체 분야']].concat(L.FIELDS.map(function (f) { return [f, f]; })).forEach(function (o) {
+    [['__auto', '질문에서 읽기(자동)'], ['', '전체 분야']].concat(L.FIELDS.map(function (f) { return [f, L.fieldLabel(f)]; })).forEach(function (o) {
       var op = h('option', { value: o[0] }, o[1]); if ((ui.field == null ? '__auto' : ui.field) === o[0]) op.selected = true; fSel.appendChild(op);
     });
     function go() {
@@ -188,7 +188,7 @@
     var src = function (k) { return ui[k] == null ? '질문에서 읽음' : '직접 고름'; };
     var cond = [];
     if (r.filters.country) cond.push('국가 ' + r.filters.country + ' (' + src('country') + ')');
-    if (r.filters.field) cond.push('분야 ' + r.filters.field + ' (' + src('field') + ')');
+    if (r.filters.field) cond.push('분야 ' + L.fieldLabel(r.filters.field) + ' (' + src('field') + ')');
     out.push(h('section', { class: 'card', id: 'result' },
       h('div', { class: 'res-top' }, badge(g.status), h('b', null, r.question)),
       h('dl', { class: 'summary', style: 'margin-top:10px' },
@@ -285,7 +285,7 @@
     var d = Object.assign({}, doc);
     var inputs = {};
     function inp(k, attrs) { var i = h('input', attrs || {}); i.value = d[k] || ''; inputs[k] = i; return i; }
-    var fSel = h('select'); L.FIELDS.forEach(function (f) { var o = h('option', { value: f }, f); if (d.field === f) o.selected = true; fSel.appendChild(o); }); inputs.field = fSel;
+    var fSel = h('select'); L.FIELDS.forEach(function (f) { var o = h('option', { value: f }, L.fieldLabel(f)); if (d.field === f) o.selected = true; fSel.appendChild(o); }); inputs.field = fSel;
     var sSel = h('select'); L.STATUSES.forEach(function (s) { var o = h('option', { value: s }, s); if (d.status === s) o.selected = true; sSel.appendChild(o); }); inputs.status = sSel;
     var dl = h('datalist', { id: 'countryList' }, L.countries(db).concat([L.COMMON_COUNTRY]).map(function (c) { return h('option', { value: c }); }));
     var preview = h('div', { class: 'note' });
@@ -364,7 +364,7 @@
     out.push(h('section', { class: 'card' }, h('h2', null, '넣어 둔 문서 (' + db.docs.length + '개 · 조각 ' + db.chunks.length + '개)'),
       table(['코드', '문서 이름', '국가', '분야', '개정일', '시행일', '상태', '조각', '주의', ''], db.docs.slice().sort(function (a, b) { return a.code < b.code ? -1 : 1; }).map(function (d) {
         var fl = L.docFlags(d, tdy, st.staleYears);
-        return { cls: d.status !== '운영' ? 'excluded' : null, cells: [h('span', { class: 'mono' }, d.code), d.title, d.country, d.field, d.revised || '-', d.effective || '-', d.status, String(d.chunkCount),
+        return { cls: d.status !== '운영' ? 'excluded' : null, cells: [h('span', { class: 'mono' }, d.code), d.title, d.country, L.fieldLabel(d.field), d.revised || '-', d.effective || '-', d.status, String(d.chunkCount),
           fl.length ? fl.join(', ') : '',
           h('span', { class: 'btn-row nowrap' },
             h('button', { type: 'button', class: 'btn btn-sm', onclick: function () { ui.open[d.code] = ui.open[d.code] === 'chunks' ? null : 'chunks'; render(); } }, '조각'),

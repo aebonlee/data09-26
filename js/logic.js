@@ -11,7 +11,20 @@
   'use strict';
 
   var REFUSAL = '근거 없음 — 인증팀 확인 필요';
-  var FIELDS = ['배출가스', '안전', '소음', 'EMC', '기능안전', '형식승인', '기타'];
+  // 2026-09-30 수강생 요청으로 「사이버 보안」 추가(앞으로 관리할 분야). 저장값은 한글 이름, 화면에는 영문을 함께 적습니다(fieldLabel).
+  var FIELDS = ['배출가스', '안전', '소음', 'EMC', '기능안전', '사이버 보안', '형식승인', '기타'];
+  var FIELD_LABELS = { '사이버 보안': '사이버 보안 (Cybersecurity)' };
+  function fieldLabel(f) { return FIELD_LABELS[f] || str(f); }
+  // 파일 메타데이터·백업에 다른 표기로 적힌 분야를 저장값으로 맞춥니다(띄어쓰기·영문·대소문자)
+  var FIELD_ALIASES = { '사이버보안': '사이버 보안', '사이버 보안 (cybersecurity)': '사이버 보안', 'cybersecurity': '사이버 보안', 'cyber security': '사이버 보안', 'cyber': '사이버 보안' };
+  function normalizeField(v) {
+    var t = trim(v);
+    if (FIELDS.indexOf(t) >= 0) return t;
+    var k = t.toLowerCase().replace(/\s+/g, ' ');
+    if (FIELD_ALIASES[k]) return FIELD_ALIASES[k];
+    for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].toLowerCase() === k) return FIELDS[i];
+    return '기타';
+  }
   var STATUSES = ['운영', '검수 중', '구버전'];
   var COMMON_COUNTRY = '공통(사내)';
 
@@ -267,7 +280,9 @@
   var WORLD = ['한국', '대한민국', '미국', '캐나다', '멕시코', '브라질', '칠레', '아르헨티나', '영국', '독일', '프랑스', '이탈리아', '스페인', '네덜란드', '벨기에',
     '스웨덴', '노르웨이', '핀란드', '덴마크', '폴란드', '체코', '튀르키예', '러시아', '우크라이나', '중국', '일본', '대만', '인도네시아', '베트남',
     '태국', '말레이시아', '필리핀', '싱가포르', '호주', '뉴질랜드', '사우디', '사우디아라비아', '아랍에미리트', 'uae', '이집트', '남아공', '남아프리카', '유럽', 'eu', '유럽연합', '북미', '중동'];
+  // 앞에 있는 분야가 먼저 잡힙니다. 사이버 보안을 맨 앞에 두어 「보안 … 안전」이 섞인 질문도 사이버 보안으로 읽습니다.
   var FIELD_WORDS = [
+    ['사이버 보안', ['사이버', '보안', 'cybersecurity', 'cyber', '해킹', '취약점', '침해', '악성코드', '소프트웨어 업데이트', '무선 업데이트', '펌웨어', 'sbom', '소프트웨어 구성 명세', '암호화', '접근 통제', '원격 접속']],
     ['기능안전', ['기능안전', '기능 안전', 'iso 13849', 'iso13849', '성능 수준', '안전 제어']],
     ['형식승인', ['형식승인', '형식 승인', 'type approval', '자기적합선언', '적합 선언']],
     ['배출가스', ['배출가스', '배기가스', '배출 가스', '배출 기준', '입자상물질', '질소산화물', 'emission', 'nox']],
@@ -361,7 +376,7 @@
     var status = STATUSES.indexOf(p.status) >= 0 ? p.status : '운영';
     return {
       code: trim(p.code).replace(/\s+/g, '-').slice(0, 40), title: trim(p.title), country: trim(p.country) || COMMON_COUNTRY,
-      field: FIELDS.indexOf(p.field) >= 0 ? p.field : '기타', revised: trim(p.revised), effective: trim(p.effective), status: status,
+      field: normalizeField(p.field), revised: trim(p.revised), effective: trim(p.effective), status: status,
       source: trim(p.source), fileName: trim(p.fileName), format: trim(p.format), addedAt: trim(p.addedAt), text: str(p.text), sample: !!p.sample
     };
   }
@@ -508,7 +523,7 @@
   function evidenceHeader(e) {
     var d = e.doc, c = e.chunk, bits = ['문서: ' + d.title + ' (' + d.code + ')', '조항: ' + c.label + (c.title ? ' ' + c.title : '')];
     if (c.page) bits.push('쪽: ' + c.page + (c.pageEnd && c.pageEnd !== c.page ? '~' + c.pageEnd : ''));
-    bits.push('국가: ' + d.country, '분야: ' + d.field);
+    bits.push('국가: ' + d.country, '분야: ' + fieldLabel(d.field));
     if (d.revised) bits.push('개정일: ' + d.revised);
     if (d.effective) bits.push('시행일: ' + d.effective);
     if (d.source) bits.push('출처: ' + d.source);
@@ -752,7 +767,7 @@
   }
 
   return {
-    REFUSAL: REFUSAL, FIELDS: FIELDS, STATUSES: STATUSES, COMMON_COUNTRY: COMMON_COUNTRY,
+    REFUSAL: REFUSAL, FIELDS: FIELDS, fieldLabel: fieldLabel, normalizeField: normalizeField, STATUSES: STATUSES, COMMON_COUNTRY: COMMON_COUNTRY,
     splitUnits: splitUnits, chunkDocument: chunkDocument, chunkRef: chunkRef,
     tokenize: tokenize, buildIndex: buildIndex, bm25Search: bm25Search, cosine: cosine, rrf: rrf,
     detectSlots: detectSlots, keyTerms: keyTerms,
