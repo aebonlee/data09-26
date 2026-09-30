@@ -86,12 +86,36 @@
         h('button', { type: 'button', class: 'btn btn-primary', onclick: loadSample }, '가상 샘플 규정으로 시작'),
         h('a', { class: 'btn', href: '#/docs' }, '지식 문서로')));
   }
+  /* 가상 샘플 넣기 — 누른 화면에 그대로 머뭅니다(2026-09-30 수정: 전에는 어디서 누르든 ① 질문하기로 옮겨 가
+     ② 지식 문서의 「가상 샘플 규정 넣기」가 넣은 결과를 보여 주지 못했음). 문서가 0개일 때는 주소가 비면
+     route() 가 ② 로 가지만 넣은 뒤에는 ① 로 바뀌므로, 지금 화면의 주소를 먼저 박아 둡니다. */
   function loadSample() {
-    if (db.docs.length && !db.sample && !confirm('지금 넣어 둔 문서에 가상 샘플 8개를 더합니다. 계속할까요?')) return;
-    SAMPLE.DOCS.forEach(function (d) { var x = Object.assign({}, d, { sample: true, addedAt: nowStr() }); L.upsertDoc(db, x); });
-    db.sample = db.docs.every(function (d) { return d.sample; });
-    save(); toast('가상 샘플 규정 8개를 넣었습니다. 예시 질문을 눌러 보세요.');
-    location.hash = '#/ask'; render();
+    var here = route().id;
+    var n = SAMPLE.DOCS.length;
+    if (db.docs.length && !db.sample && !confirm('지금 넣어 둔 문서에 가상 샘플 ' + n + '개를 더합니다. 계속할까요?')) return;
+    var r = L.addSampleDocs(db, SAMPLE.DOCS, nowStr());
+    ui.sampleNote = { added: r.added, replaced: r.replaced };
+    save();
+    toast(here === 'docs'
+      ? '가상 샘플 규정 ' + r.total + '개를 넣었습니다. 아래 「넣어 둔 문서」 표에서 확인해 주세요.'
+      : '가상 샘플 규정 ' + r.total + '개를 넣었습니다. 예시 질문을 눌러 보세요.');
+    if (location.hash !== '#/' + here) location.hash = '#/' + here;
+    render();
+    /* 확인 상자가 「문서 넣기」 아래라 좁은 화면에서는 안 보임 — 주소가 바뀌면 hashchange 가 맨 위로 올리므로 그 뒤에 내림(위에 붙는 .topbar 높이만큼 비움) */
+    if (here === 'docs') setTimeout(function () { var e = document.querySelector('.sample-loaded'), tb = document.querySelector('.topbar'); if (e) window.scrollTo(0, Math.max(0, e.getBoundingClientRect().top + window.scrollY - (tb ? tb.getBoundingClientRect().height : 0) - 12)); }, 80);
+  }
+  function sampleNoteCard() {
+    var n = ui.sampleNote; if (!n) return null;
+    var parts = [];
+    if (n.added.length) parts.push('새로 ' + n.added.length + '개');
+    if (n.replaced.length) parts.push('이미 있던 ' + n.replaced.length + '개는 원본으로 다시 넣음');
+    return h('section', { class: 'card sample-loaded', role: 'status' },
+      h('h2', null, '가상 샘플 규정 ' + (n.added.length + n.replaced.length) + '개를 넣었습니다'),
+      h('p', { class: 'note' }, parts.join(' · ') + '. 알파국 · 베타국 · 감마연합의 가상 규정입니다(실제 법규 아님). 넣은 문서는 아래 표에 있습니다.'),
+      h('p', { class: 'mono codes' }, n.added.concat(n.replaced).slice().sort().map(function (c, i) { return [i ? ' · ' : '', h('span', null, c)]; })),
+      h('div', { class: 'btn-row' },
+        h('a', { class: 'btn btn-primary', href: '#/ask' }, '① 질문하기에서 예시 질문 보기'),
+        h('button', { type: 'button', class: 'btn', onclick: function () { ui.sampleNote = null; render(); } }, '닫기')));
   }
 
   /* ── ① 질문하기 ─────────────────────────── */
@@ -349,6 +373,7 @@
             db.docs = []; db.chunks = []; db.vectors = {}; db.sample = false; ui.res = null; save(); render();
           } }, '모든 문서 지우기') : null))
     ];
+    if (ui.sampleNote) out.push(sampleNoteCard());
     ui.pending.forEach(function (p, i) {
       out.push(h('section', { class: 'card pending' }, h('h2', null, '넣기 전 확인 — ' + p.doc.fileName),
         h('p', { class: 'note' }, '메타데이터(국가 · 분야 · 개정일 · 시행일 · 출처)는 답에 함께 표시되고 검색 조건으로 쓰입니다. 파일에서 추정하지 않으니 직접 적어 주세요.'),
@@ -553,6 +578,6 @@
     document.title = p.t + ' — 인증법규 Agent';
     save();
   }
-  window.addEventListener('hashchange', function () { render(); main.focus(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', function () { if (route().id !== 'docs') ui.sampleNote = null; render(); main.focus(); window.scrollTo(0, 0); });
   render();
 })();

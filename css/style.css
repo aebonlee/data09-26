@@ -288,6 +288,9 @@ table.list tr.differs td { background: #fffaf0; }
 table.list.chunks td:last-child { min-width: 280px; }
 table.list.log td:nth-child(2) { min-width: 200px; }
 .card.pending { border-color: #9dbdf0; }
+.card.sample-loaded { border-color: #bfe0c9; background: #f6fbf7; }
+.card.sample-loaded h2 { color: var(--ok); }
+.card.sample-loaded .codes span { white-space: nowrap; }
 
 @media print {
   .side, .topbar, .site-footer, .sample-banner, .no-print, .toast, .filters { display: none !important; }

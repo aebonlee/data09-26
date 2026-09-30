@@ -405,6 +405,17 @@
     db.chunks = db.chunks.filter(function (c) { return c.docCode !== code; });
     Object.keys(db.vectors || {}).forEach(function (k) { if (k.indexOf(code + ' ') === 0) delete db.vectors[k]; });
   }
+  /* 가상 샘플 넣기 — 같은 코드가 있으면 원본으로 다시 넣음. 새로 넣은 코드와 다시 넣은 코드를 나눠 돌려줌(화면의 확인 글) */
+  function addSampleDocs(db, docs, stamp) {
+    var had = {}; db.docs.forEach(function (d) { had[d.code] = 1; });
+    var added = [], replaced = [];
+    docs.forEach(function (d) {
+      var x = upsertDoc(db, Object.assign({}, d, { sample: true, addedAt: stamp || '' }));
+      (had[x.code] ? replaced : added).push(x.code);
+    });
+    db.sample = db.docs.length > 0 && db.docs.every(function (d) { return d.sample; });
+    return { added: added, replaced: replaced, total: added.length + replaced.length };
+  }
   function docMap(db) { var m = {}; db.docs.forEach(function (d) { m[d.code] = d; }); return m; }
   function countries(db) { var s = {}; db.docs.forEach(function (d) { s[d.country] = 1; }); return Object.keys(s).sort(); }
 
@@ -772,7 +783,7 @@
     tokenize: tokenize, buildIndex: buildIndex, bm25Search: bm25Search, cosine: cosine, rrf: rrf,
     detectSlots: detectSlots, keyTerms: keyTerms,
     defaultSettings: defaultSettings, cleanSettings: cleanSettings, emptyDb: emptyDb, restoreDb: restoreDb, cleanDoc: cleanDoc, suggestCode: suggestCode,
-    upsertDoc: upsertDoc, removeDoc: removeDoc, docMap: docMap, countries: countries, docFlags: docFlags, allowedChunks: allowedChunks,
+    upsertDoc: upsertDoc, removeDoc: removeDoc, addSampleDocs: addSampleDocs, docMap: docMap, countries: countries, docFlags: docFlags, allowedChunks: allowedChunks,
     ask: ask, buildPrompt: buildPrompt, refusalText: refusalText,
     splitSentences: splitSentences, citesOf: citesOf, numbersOf: numbersOf, checkAnswer: checkAnswer,
     followups: followups, runGolden: runGolden,

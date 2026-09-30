@@ -292,5 +292,33 @@ test('자동 보내기 주소 점검 — https 페이지에서 http 사내 주�
   assert.equal(E.validateConfig(cfg, 'file:').errors.length, 0);
 });
 
+console.log('가상 샘플 넣기');
+test('빈 DB 에 넣으면 전부 「새로」, 다시 넣으면 전부 「다시 넣음」 — 문서 · 조각 수는 늘지 않음', () => {
+  const db = L.emptyDb();
+  const r1 = L.addSampleDocs(db, S.DOCS, '2026-09-30 10:00');
+  assert.equal(r1.added.length, S.DOCS.length); assert.equal(r1.replaced.length, 0); assert.equal(r1.total, S.DOCS.length);
+  assert.equal(db.sample, true);
+  const nDocs = db.docs.length, nChunks = db.chunks.length;
+  const r2 = L.addSampleDocs(db, S.DOCS, '2026-09-30 10:01');
+  assert.equal(r2.added.length, 0); assert.equal(r2.replaced.length, S.DOCS.length);
+  assert.equal(db.docs.length, nDocs); assert.equal(db.chunks.length, nChunks);
+  assert.ok(db.docs.every((d) => d.sample && d.addedAt === '2026-09-30 10:01'));
+});
+test('사용자 문서가 있으면 그대로 두고 샘플만 더함, sample 표시는 꺼짐', () => {
+  const db = L.emptyDb();
+  L.upsertDoc(db, { code: 'MY-1', title: '사내 문서', country: '알파국', field: 'etc', status: '운영', text: '제1조(목적) 사내 문서입니다.' });
+  const r = L.addSampleDocs(db, S.DOCS, 't');
+  assert.equal(r.added.length, S.DOCS.length);
+  assert.ok(db.docs.some((d) => d.code === 'MY-1' && !d.sample));
+  assert.equal(db.sample, false);
+});
+test('화면: 「가상 샘플 규정 넣기」는 누른 화면에 머묾 — loadSample 이 ① 질문하기 주소를 박지 않음', () => {
+  const src = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('function loadSample()'), src.indexOf('function sampleNoteCard()'));
+  assert.ok(body.length > 0, 'loadSample 을 찾지 못함');
+  assert.doesNotMatch(body, /#\/ask/);
+  assert.match(body, /route\(\)\.id/);
+});
+
 await Promise.all(pending);
 console.log(`\n${passed}개 통과`);
