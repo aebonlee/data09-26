@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인증법규 Agent — 1단계</title>
+  <meta name="description" content="건설기계 인증법규 문서를 조항 단위로 나눠 근거를 찾고, 근거가 있을 때만 답하며 AI 답의 문장마다 인용을 대조하는 근거 한정(Zero-Hallucination) RAG 브라우저 도구(1단계)">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  <div class="shell">
+    <aside class="side" aria-label="주 메뉴">
+      <a class="brand" href="#/ask">
+        <span class="brand-mark" aria-hidden="true">인증</span>
+        <span class="brand-text">
+          <span class="brand-name">인증법규 Agent</span>
+          <span class="brand-sub">data09-26 · 1단계</span>
+        </span>
+      </a>
+      <nav class="nav" id="nav"></nav>
+      <p class="side-note">근거 없으면 답하지 않습니다.<br>답의 모든 문장에 조항 인용.</p>
+    </aside>
+
+    <div class="body">
+      <header class="topbar">
+        <a class="scope-chip" id="dataChip" href="#/docs"></a>
+        <span class="topbar-note" id="storeNote"></span>
+      </header>
+      <div id="sampleBanner" class="sample-banner" hidden></div>
+      <main id="main" class="main" tabindex="-1"></main>
+      <footer class="site-footer">
+        1단계 · 문서와 질문은 이 브라우저 안에서만 읽고 저장합니다(서버로 보내지 않음) · AI 자동 보내기는 설정한 경우에만 · 의사결정 지원 도구이며, 최종 인증 판단과 대외 제출은 인증팀 확인이 원칙입니다
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- 로컬 파일(file://)로 열어도 돌도록 module 이 아닌 일반 스크립트로 불러옵니다. pdf.js 는 PDF 를 넣을 때만 불러옵니다 -->
+  <script src="vendor/jszip.min.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/sample-data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/readers.js"></script>
+  <script src="js/ai-endpoint.js"></script>
+  <script src="js/ai-panel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
